@@ -1,0 +1,414 @@
+SpringMVC的理解
+	1、springmvc能够使用spring的IOC和AOP
+
+	2、在controller、service、dao都可以使用注解。
+	   @Controller创建处理器对象
+	   @Service创建业务对象
+	   @Autowired @Resource 在controller类中注入service,在service类中注入dao
+
+	3、所谓 SpringMVC 的注解式开发是指，在代码中通过对类与方法的注解，便可完成处理器
+           在 springmvc 容器的注册
+
+	   springmvc的使用步骤：
+	   1）创建maven web项目-org.apache.maven.archetypes:maven-archetype-webapp
+	   2）在新建好的web项目中的pom.xml文件中加入servlet、SpringMVC依赖
+		<dependency> 
+			<groupId>javax.servlet</groupId> 
+			<artifactId>javax.servlet-api</artifactId> 
+			<version>3.1.0</version> 
+			<scope>provided</scope>
+		</dependency> 
+		
+		<dependency> 
+			<groupId>org.springframework</groupId> 
+			<artifactId>spring-webmvc</artifactId> 
+			<version>5.2.5.RELEASE</version>
+		</dependency>
+
+	    3）在WEB-INF下的web.xml中配置 注册中央调度器
+	       在服务器启动的时候，会找/WEB-INF/myweb-servlet.xml,/WEB-INF/springmvc-servlet.xml。
+	       找的文件名是：WEB-INF，文件名称是：<servlet-name>-servlet.xml
+	       找这个文件的原因是：在DispatcherServlet这个Servlet的init()方法中，会创建springmvc的容器对象
+	       WebApplicationContext， 在创建容器对象时，会加载读取springmvc需要的配置文件，默认查找位置就
+	       是/WEB-INF/<servlet-name>-servlet.xml,但是我们没有在WEB-INF中放这个xml文件，一般情况下，这个
+	       配置文件是放在resources目录下，所以在注册中央调度器的时候，需要在中央调度器设置查找SpringMVC-Servlet.xml
+	       这个文件的路径以及文件名字。这里我们起名为SpringMVC.xml。
+               springmvc需要的配置文件，可以单独指定的，需要配置参数contextConfigLocation.
+
+		<servlet>
+			<servlet-name>springmvc</servlet-name>
+			<!--前端控制器（front controller）-->
+			<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+
+			<!--指定springmvc配置文件-->
+			<init-param>
+			    <param-name>contextConfigLocation</param-name>
+			    <param-value>classpath:springmvc.xml</param-value>
+			</init-param>
+			<!--在服务器启动的时候，创建Servlet对象-->
+			<load-on-startup>1</load-on-startup>
+	       </servlet>
+
+	       <servlet-mapping>
+			<servlet-name>springmvc</servlet-name>
+			<!--
+			   <url-pattern> ： 表示把请求交给指定的Servlet对象。只有把请求交给DispatcherServlet，
+			   这样的请求才能使用springmvc框架处理。 使用DispatcherServlet接收用户的请求。
+			   在框架中url-pattern:
+			   1.扩展名： *.xxxx , xxxx 就是自定义的扩展名。 例如 *.do , *.action,*.mvc等等，不能使用*.jsp
+			   2.使用斜杠"/"
+
+			-->
+			<url-pattern>*.do</url-pattern>
+	       </servlet-mapping>
+
+	       4）在工程的类路径src目录下的resources创建SpringMVC的配置文件springmvc-servlet.xml文件，这个文件的文件名字
+		  是可以任意命名的。
+		  这个文件的作用是声明web相关的对象，处理器、视图对象等
+
+		  <?xml version="1.0" encoding="UTF-8"?>
+		<beans xmlns="http://www.springframework.org/schema/beans"
+		       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+		    <!--springmvc的配置文件： 声明的web相关的对象，例如处理器对象，视图对象等-->
+		    <!--声明处理器对象， 让容器创建处理器对象，并把请求交给这个对象
+			class:处理器类的全限定名称
+			id:请求的uri地址，需要以"/"开头。
+		    -->
+		    <bean id="/some.do" class="com.bjpowernode.controller.MyController" />
+
+		    <!--声明视图解析器：springmvc中的一个对象，处理视图的。能指定视图的路径和扩展名
+		       InternalResourceViewResolver:内部资源视图解析器，处理jsp，jstl等视图文件
+		    -->
+		    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+			<!--指定前缀：视图文件目录-->
+			<property name="prefix" value="/WEB-INF/view/" />
+			<!--指定后缀：视图文件的扩展名-->
+			<property name="suffix" value=".jsp" />
+		    </bean>
+		</beans>
+
+	       5）创建处理器
+	       在类上与方法上添加相应的注解
+	       @Controller:表示当前类为处理器
+	       @RequestMapping:表示当前方法为处理器方法。这个方法对value属性所指定的URL进行处理和响应，被注解的方法的
+	       方法名字可以随意。这里的URL和SpringMVC中的声明处理器对象，创建的对象中id值一一对应，SpringMVC配置文件通过
+	       这个URL找到要创建对象的类，然后创建该类的对象，接着把指定的请求交给对应的方法处理。若有多个请求路径均可
+	       匹配该处理器方法的执行，则 @RequestMapping 的 value 属性中可以写上一个数组。
+	       ModelAndView 类中的 addObject()方法用于向其 Model 中添加数据。Model 的底层为一个 HashMap。Model 中的数据
+	       存储在 request 作用域中，SringMVC 默认采用转发的方式跳转到视图，本次请求结束，模型中的数据被销毁。
+
+	       6）在Springmvc.xml中声明组件扫描器
+	       在其中注册组件扫描器，作用是在指定的基本包中扫描注解
+	       <context:component-scan base-package="com.controller"/>
+
+	       7）定义目标页面
+		  在webapp目录下新建一个子目录jsp,在其中新建一个jsp页面xxx.jsp
+
+	       8）修改试图解析器的注册
+	       SpringMVC 框架为了避免对于请求资源路径与扩展名上的冗余，在视图解析器InternalResouceViewResolver 中引入了
+	       请求的前辍与后辍。而 ModelAndView 中只需给出要跳转页面的文件名即可，对于具体的文件路径与文件扩展名，
+	       视图解析器会自动完成拼接。
+	       注册视图解析器：帮助我们处理视图的路径和扩展名，生成视图对象
+	       注册内部资源视图解析器InternalResourceViewResolver
+	       <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+			前缀：表示视图所在的路径
+			<property name="prefix" value="/WEB-INF/jsp/"/>
+			后缀：表示视图文件的扩展名
+			<peoperty name="suffix" value=".jsp"/>
+		</bean>
+		把xxx.jsp文件放到/web-inf/jsp/路径中
+
+	4、 @RequestMapping(value="/对应SpringMVC.xml的id值名自定义",method=RequestMethod.POST/GET)定义请求规则
+		1）指定模块名称
+		   @RequestMapping注解可以定义处理器对于请求的映射规则，可以在方法上也可以在类上面，但是表示的意义不同
+		   value属性值以/开头。
+		   这个注解中的value属性是定义所匹配的请求的URL，对应SpringMVC.xml文件中的id的这个值。不同的URL对应不同
+		   的处理器方法，如果这些请求具有相同的URL部分，这个注解可以放在类上面，这时候URL表示的是模块的名称。
+		   URL的请求是相对于WEB的根目录。
+		2）对请求方式的定义
+		   对于 @RequestMapping，其有一个属性 method，用于对被注解方法所处理请求的提交方式进行限制，即只有满足
+		   该 method 属性指定的提交方式的请求，才会执行该被注解方法。
+		   如果使用post/get那么只能使用表单请求或者AJAX请求。
+
+	5、处理器方法的参数
+		1）处理器方法有四类参数，会在系统调用是自动赋值
+			1）HttpServletRequest
+			2)HttpServletResponse
+			3)HttpSession
+			4)请求中所携带的请求参数
+
+		2）逐个参数接受
+		   需要保证请求参数名与请求处理方法的参数名相同即可。
+
+		   发送的请求：
+		   <from action="对应RequestMapping的value值" method=“post”>
+			<input type="text" name="请求参数名"/><br>
+			<input type="text" name="请求参数名"/><br>
+		   </form>
+
+		   修改处理器类：
+		   @CONTROLLER
+		   @RequestMapping("/模块名字")
+		   public class Controller{
+			@RequestMapping(value="/对应的请求方法的名字")
+			public ModelAndView Register(String 请求参数名，int 请求参数名){
+				ModelAndView mv = new ModelAndView();
+				mv.addObject("需要传入的参数值"，请求参数值)；
+				mv.addObject("需要传入的参数值"，请求参数值)；
+				mv.setViewName("需要view的jsp模块处理的包");
+				return mv;
+
+			}
+		   }
+
+		   添加需要view的jsp模块处理的包的页面
+		    一般在/WEB-INF/jsp下添加xxx.jsp页面
+		    <body>
+			请求参数值 = ${需要传入的参数值}<br>
+			请求参数值 = ${需要传入的参数值}<br>
+		    </body>
+			   
+		3）请求参数中文乱码问题
+		    解决方法：
+		    在web.xml中注册字符集过滤器，这个过滤器应该注册在其他过滤器之前。过滤器的执行是按照其注顺序进行
+			
+		    注册字符集过滤器：解决POST请求乱码的问题
+		    <filter>
+			<filer-name>characterEncodingFilter</filter-name>
+			spring-web.jar
+			<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+			指定字符集
+			<init-param>
+				<param-name>encoding</param-name>
+				<param-value>utf-8</param-value>
+			<init-param>
+			强制request使用字符集encoding
+			<init-param>
+				<param-name>forceRequestEncoding</param-name>
+				<param-value>true</param-value>
+			</init-param>
+			强制response使用字符集
+			<init-param>
+				<param-name>forceResponseEncoding</param-name>
+				<param-value>true</param-value>
+			</init-param>
+		    </filter>
+		    <filter-mapping>
+			<filter-name>characterEncodingFilter</filter-name>
+			<url-pattern>/*</url-pattern>
+		    </filter-mapping>
+
+		 4）校正请求参数名 @RequestParam
+		    若请求 URL 所携带的参数名称与处理方法中指定的参数名不相同时，则需在处理方法参数前，添加一个注解 
+		    @RequestParam(“请求参数名”)，指定请求 URL 所携带参数的名称。该注解是对处理器方法参数进行修饰的。
+		    value 属性指定请求参数的名称。这个参数放在处理方法的参数列表的参数前面。
+
+		    @RequestParam（value="请求参数名"，required=boolean）其中required,boolean类型的，默认是true
+		    其中true:表示请求中必须有参数，false:可以没有此参数
+
+		  5）对象参数接收
+		     将处理器方法的参数定义为一个对象，只要保证请求参数名与这个对象的属性同名即可。
+
+		     例如：
+		     自定义类：
+		     public class xxx{
+			属性；
+			set / get
+			toString()
+		     }
+
+		     处理器类：
+		     @Controller
+		     @RequestMapping("/模块名字")
+		     public class Controller{
+			@RequestMapping(value="/对应的请求方法的名字")
+			public ModelAndView 处理方法名字（对象和对象名字）{
+				ModelAndView mv - new ModelAndView();
+				mv.addObject("自定义名字和请求中的对应"，对象名字);
+				return mv;
+			}
+		     }
+
+		     修改VIEW页面
+		     <body>
+			对象名字 = ${自定义名字和请求中的对应}<br>
+		     </body>
+
+	7、处理器方法的返回值
+	   使用 @Controller 注解的处理器的处理器方法，其返回值常用的有四种类型：
+	   ModelAndView
+	   String
+	   无返回值 void
+	   返回自定义类型对象
+
+	   1）返回ModelAndView
+	      若处理器方法处理完后，需要跳转到其它资源，且又要在跳转的资源间传递数据，此时处理器方法返回 ModelAndView
+	      比较好。当然，若要返回 ModelAndView，则处理器方法中需要定义 ModelAndView 对象。在使用时，若该处理器方法
+	      只是进行跳转而不传递数据，或只是传递数据而并不向任何资源跳转（如对页面的 Ajax 异步响应），此时若返回 
+	      ModelAndView，则将总是有一部分多余：要么 Model 多余，要么 View 多余。即此时返回 ModelAndView 将不合适。
+
+	   2）返回String
+	      返回内部资源逻辑视图名若要跳转的资源为内部资源，则视图解析器可以使用 InternalResourceViewResolver 内部
+	      资源视图解析器。此时处理器方法返回的字符串就是要跳转页面的文件名去掉文件扩展名后的部分。这个字符串与视
+	      图解析器中的 prefix、suffix 相结合，即可形成要访问的 URI。
+
+	      也就是可以直接返回/WEB-INF/jsp/xxx.jsp
+	      
+	   3）返回void
+	      在处理器处理AJAX请求的时候和不需要任何跳转到其他资源。返回值既没有数据也没有视图
+	      可以通过使用HttpServletResponse的输出对象，把数据输出到浏览器
+
+	   4）返回对象Object
+	      处理器方法也可以返回 Object 对象。这个 Object 可以是 Integer，String，自定义对象，Map，List 等。但返回的
+	      对象不是作为逻辑视图出现的，而是作为直接在页面显示的数据出现的。返回对象，需要使用 @ResponseBody 注解，将
+	      转换后的 JSON 数据放入到响应体中。
+
+	      步骤：
+	      1）加入maven依赖
+	      2）声明注解驱动
+	         将 Object 数据转化为 JSON 数据，需要由消息转换器 HttpMessageConverter 完成。而转换器的开启，需要由
+		 <mvc:annotation-driven/>来完成。
+		 SpringMVC 使用消息转换器实现请求数据和对象，处理器方法返回对象和响应输出之间的自动转换
+		 当 Spring 容器进行初始化过程中，在<mvc:annotation-driven/>处创建注解驱动时，默认创建了七个 
+		 HttpMessageConverter 对象。也就是说，我们注册<mvc:annotation-driven/>，就是为了让容器为我们创建 
+		 HttpMessageConverter 对象。
+		 在Springmvc.xml中加入注解驱动：<mvc:annotation-driven/>
+		 HttpMessageConverter 接口 : HttpMessageConverter<T>是 Spring3.0 新添加的一个接口，负责将请求信息转换
+		 为一个对象（类型为 T），将对象（类型为 T）输出为响应信息。
+
+	      3）返回自定义类型对象时，不能以对象的形式直接返回给客户端浏览器，而是将对象转换为 JSON 格式的数据发送给
+	      浏览器的。
+		由于转换器底层使用了Jackson转换方式将对象转换为JSON数据，所以需要导入Jackson的相关 Jar 包。
+
+		 1、定义数据类型这个类是自定义的。属性也是自定义的。
+		 2、修改处理器方法在方法上加入 @ResponseBody注解，创建自定义的类的对象并复制，将这个对象作为返回值返回
+		 3、修改index页面写js的代码这是一个展示页面
+		 注：返回的是List<>集合也是相同的操作步骤，但是要注意返回字符串对象，若要返回非中文字符串，将前面返回数
+		 值型数据的返回值直接修改为字符串即可。但若返 回 的 字 符 串 中 带 有 中 文 字 符 ， 则 接 收 方 页 面 
+		 将 会 出 现 乱 码 。 此 时 需 要 使 用 @RequestMapping 的 produces 属性指定字符集。
+
+
+         8、解读<url-pattern/>
+		在web.xml中配置中央调度器的的url常使用*.xxx，也可以使用/ DispatcherServlet 会将向静态资源的获取请求，
+		例如.css、.js、.jpg、.png等资源的获取请求，当作是一个普通的 Controller 请求。中央调度器会调用处理器映
+		射器为其查找相应的处理器。当然也是找不到的，所以在这种情况下，所有的静态资源获取请求也均会报 404 错误。
+
+		如果一定要使用/：使用<mvc:default-servlet-handler />
+			声明了<mvc:default-servlet-handler />之后，springmvc 框 架 会 在 容 器 中 创 建
+			DefaultServletHttpRequestHandler 处理器对象。它会像一个检查员，对进入 DispatcherServlet的
+			URL 进行筛查，如果发现是静态资源的请求，就将该请求转由 Web 应用服务器默认的Servlet 处理。一般
+			的服务器都有默认的 Servlet。
+		  
+		使用<mvc:resources/>Spring 定义了专门用于处理静态资源访问请求的处理器ResourceHttpRequestHandler。并且添
+		加了<mvc:resources/>标签，专门用于解决静态资源无法访问问题。需要在 springmvc 配置文件中添加如下形式的
+		配置：<mvc:resources location="表示静态资源所在目录。当然，目录不要使用/WEB-INF/及其子目录"
+				mapping="表 示 对 该 资 源 的 请 求 （ 以/images/开始的请求 ， 如 image/beauty.jpg , 
+                                        /images/car.png 等）。注意，后面是两个星号**。">
+		
+		声明注解驱动
+		解决了动态资源文件和静态资源文件冲突的问题，在springmvc配置文件加入：<mvc:annotation-driven/>
+	
+	这里开始是SpringMVC的核心技术
+	9、请求转发和重定向
+	   
+	   请求转发：
+	   处理器方法返回 ModelAndView 时，需在 setViewName()指定的视图前添加 forward:，且此时的视图不再与视图解析器一
+	   同工作，这样可以在配置了解析器时指定不同位置的视图。视图页面必须写出相对于项目根的路径。forward 操作不需要视
+	   图解析器。处理器方法返回 String,在视图路径前面加入 forward: 视图完整路径。
+	   例如
+	   @RequestMapping(value="/some.do")
+	   public ModelAndView doSome(Interger age,String name){
+		ModelAndVIew mv = new ModelAndView();
+		mv.addOject();
+		mv.setViewName("forward:/other.jsp");
+		return mv;
+	   }
+
+	   重定向：
+	   在处理方法返回的视图字符串的前面添加redirect:,则可以实现重定向跳转。
+	   例如：
+	      @RequestMapping(value="/some.do")
+	   public ModelAndView doSome(Interger age,String name){
+		ModelAndVIew mv = new ModelAndView();
+		mv.addOject();
+		mv.setViewName("redirect:/other.jsp");这里不能访问受保护的WEB-INF下面的资源
+		return mv;
+	   }
+
+	   10、异常处理
+	       
+	       使用 @ExceptionHandler注解处理异常
+
+	       @ExceptionHandler注解可以将一个方法指定为异常处理方法。这个注解只有一个属性value，是一个Class<?>数组，
+	       用于指定该注解的方法所要处理的异常类，即所要匹配的异常。
+	       而被注解的方法，其返回值可以是 ModelAndView、String，或 void，方法名随意，方法参数可以是 Exception 及
+	       其子类对象、HttpServletRequest、HttpServletResponse 等。系统会自动为这些方法参数赋值。
+	       对于异常处理注解的用法，也可以直接将异常处理方法注解于 Controller 之中。
+
+	       （1）自定义异常类
+	       （2）修改Controller抛出异常
+	       （3）定义异常响应页面，但是一般不这样用，是将异常处理方法专门定义在一个类中，作为全局的异常处理类。
+	       使用 @ControllerAdvice控制器增强，使用该注解的类可以使用 @ExceptionHandler,当使用 @RequestMapping
+	       注解修饰的方法抛出一场时，会执行  @ControllerAdvice 修饰的类中的异常处理方法。 @ControllerAdvice 是使用
+	       @Component 注解修饰的，可以<context:component-scan>扫描到 @ControllerAdvice 所在的类路径(包名)，创建对象
+	       （4）定义全局异常类
+	       （5）定义Spring配置文件
+		    注册组件扫描器
+		    注册注解驱动
+
+	 11、拦截器
+	     interceptor 拦截指定的用户请求，并进行相应的预处理与后处理。拦截的时间点在“处理器映射器给根据用户提交的请求
+	     映射出了所要执行的处理器类，并且也找到了要执行该处理器类的处理器适配器，在处理器适配器执行处理器之前”在处理
+	     器映射出所要执行的处理器类时，已经将拦截器与处理器组合为了一个处理器执行链，并且返回给中央调度器。
+	     自定义拦截器，需要实现 HandlerInterceptor 接口。而该接口中含有三个方法：
+	     preHandle(request,response, Object handler)：
+		该方法在处理器方法执行之前执行。其返回值为 boolean，若为 true，则紧接着会执行处理器方
+		法，且会将 afterCompletion()方法放入到一个专门的方法栈中等待执行。
+
+	     postHandle(request,response, Object handler,modelAndView)：
+		该方法在处理器方法执行之后执行。处理器方法若最终未被执行，则该方法不会执行。
+		由于该方法是在处理器方法执行完后执行，且该方法参数中包含 ModelAndView，所以该方法可以修
+		改处理器方法的处理结果数据，且可以修改跳转方向。
+
+	     afterCompletion(request,response, Object handler, Exception ex)： 
+	        当 preHandle()方法返回 true 时，会将该方法放到专门的方法栈中，等到对请求进行响应的所有
+		工作完成之后才执行该方法。即该方法是在中央调度器渲染（数据填充）了响应页面之后执行的，此
+		时对 ModelAndView 再操作也对响应无济于事。
+
+	     afterCompletion 最后执行的方法，清除资源，例如在 Controller 方法中加入数据
+
+
+	     步骤：
+	     1）注册拦截器
+	     <mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>
+			<bean class="自定义的拦截器的全路径">
+		</mvc:interceptor>
+	     </mvc:interceptors>
+	     <mvc:mapping/>用于指定当前所注册的拦截器可以拦截的请求路径，而/**表示拦截所有请求
+	     2）修改index页面
+	     3）修改处理器
+	     4）修改show页面
+	     5）输出控制台结果
+
+
+	     多个拦截器：
+	     当有多个拦截器时，形成拦截器链。拦截器链的执行顺序，与其注册顺序一致。需要再次强调一点的是，当某一个拦截器
+	     的 preHandle()方法返回 true 并被执行到时，会向一个专门的方法栈中放入该拦截器的 afterCompletion()方法。
+	     只要有一个 preHandle()方法返回 false，则上部的执行链将被断开，其后续的处理器方法与 postHandle()方法将无法
+	     执行。但，无论执行链执行情况怎样，只要方法栈中有方法，即执行链中只要有 preHandle()方法返回 true，就会执行
+	     方法栈中的afterCompletion()方法。最终都会给出响应。
+
+
+
+	   
+
+
+
+
+
+
+	   

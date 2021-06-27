@@ -1,0 +1,238 @@
+mybtis
+第一章
+  1.三层架构
+    界面层：和用户打交道的，接受用户的请求参数，显示处理结果的。（jsp,html,servlet）
+    业务逻辑层：接收了界面层传递的数据，计算逻辑，调用数据库，获取数据。
+    数据访问层：就是访问数据库，执行对数据的查询，修改，删除等....
+
+    三层对应的包
+      界面层：controller包（servlet）
+      业务逻辑层：service 包（Service包）
+      数据访问层：dao包（dao类）
+
+    三层中类的交互
+    用户使用界面层--> 业务逻辑层 --> 数据访问层（持久层）-->数据库（mysql）
+
+    三层对应的处理框架
+    界面层----servlet----springmvc（框架）
+    业务逻辑层---service类---spring
+    数据访问层---dao类---mybatis
+
+    框架（Framework）定义
+	框架是整个或部分系统的可重用设计，表现为一组抽象构件及构件实例间交互的方法；
+	框架是可被应用开发者定制的应用骨架、模板。
+	框架是一个半成品软件，就是一组组件，供你使用完成你自己的系统。
+	框架是安全的，可复用的，不断升级的软件。
+	框架一般不是全能的，不能做所有的事情
+	框架是针对某一个领域有效，特长在某一个方面，比如mybatis做数据库操作强，但是他不能做其他的。
+
+    JDBC的缺陷
+    1.代码多，开发效率低
+    2.需要关注connection,statement，resultset对象创建和销毁
+    3.对ResultSet查询的结果，需要自己封装为List
+    4.重复的代码比较多些
+    5.业务代码和数据库的操作混在一起
+
+    mybatis:
+	mybatis是一个sql映射框架，提供的数据库的操作能力。增强的JDBC，使用mybatis让开发人员集中精神
+	写sql就可以了，不必关心connection、statement、resultset的创建，销毁，sql的执行。
+	1）sql mapper :sql映射
+		可以把数据库表中的一行数据 映射为一个Java对象
+		一行数据可以看成一个Java对象操作这个对象就相当于操作表中的数据
+
+	2）Data Access Object(DAOs):数据访问，对数据库执行增删改查。
+
+mybatis提供的功能：
+1.提供了创建Connection,Statement,ResultSet的能力，不用开发人员创建这些对象。
+2.提供了执行sql语句的能力，不用自己执行sql
+3.提供了循环sql，把sql的结果转为Java对象，list集合的能力
+	就是把这个：while（re.next（））{
+		Student stu = new Student();
+		stu.setId(rs.getInt("id"));
+		stu.setName(rs.getString("name"));
+		stu.setAge(rs.getInt("Age"));
+		//从数据库取出数据转为Student对象，封装到list集合
+		student.add(stu);
+		}
+4.提供了关闭资源的能力
+
+我们只需要提供sql语句，让mybatis处理sql，开发人员得到list集合或java对象（表中的数据）
+
+总结：mybatis是一个sql映射框架，提供了数据库的操作能力。是一个增强的ＪＤＢＣ使用mybatis让开发人员可以集中精力写SQL语句，
+不用关心connection,statement,resultset的创建，销毁，SQL的执行。
+
+一、入门案例：
+	我自己的第一个mybits例子
+
+	在idea上实现的步骤：
+	1.新建一个student表
+	2.加入maven的mybits坐标，mysql驱动的坐标
+	3.创建实体类，student--保存表中的一行数据
+	4.创建持久层的dao接口，定义操作数据库的方法
+	5.创建一个mybatis使用的配置文件
+	  叫做SQL映射文件，这个是写SQL语句的，一般一个表一个SQL映射文件
+	  这个文件就是xml文件
+	6.创建mybits的主配置文件：
+	   一个项目就只有一个主配置文件。
+	   主配置文件提供了数据库的连接层信息和SQL映射文件的位置信息
+	7.创建使用mybatis类，
+	  通过mybatis访问数据库
+
+	基本的操作步骤：
+	1.加入maven的依赖在pom文件中加入管理jar包
+	2.创建Dao接口：在Dao接口中写接口文件和一个操作sql语句的xxx.XML文件。
+	定义了操作数据库的方法
+	3.创建mapper文件，也叫sql映射文件就是步骤2中的XML文件，功能就是写sql语句
+	，这里的sql语句是和自己定义的接口文件中的方法对应的sql语句
+	4.创建mybatis的一个主配置文件：1）连接数据库；2）指定mapper文件的位置注意这里
+	不能用包名“.”的方式例如com.Dao的方式要用com/Dao的方式写全路径名字。
+	5.这是一个固定的操作首先拿到config的“mybatis.xml”主配置文件，然后通过
+	SqlSessionFactoryBuilder拿到SqlSessionFactory对象，然后通过SqlSessionFactory
+	对象获取SqlSession对象和它的方法openSession()。通过SqlSession的方法执行sql语句
+
+
+二、主要的类的介绍：
+	1、Resources: mybatis中的一个类，负责读取主配置文件
+	  InputStream in = Resources.getResourceAsStream(config);括号中是一个
+	  （“mybatis.xml”）
+	2、sqlSessionFactoryBuilder:创建sqlSessionFactor对象，
+	   sqlSessionFactoryBuild builder = new SqlSessionFactoryBuilder();
+	   //这是创建一个SqlSessionFactory对象的
+	   SqlSessionFactory factory = builder.build(in);
+	3、SqlSessionFactory:重量级的对象，程序创建一个对象耗时比较长，使用资源比较多
+	   在整个项目中，有一个就够用了。
+	   SqlSessionFactory:接口，接口实现类：DefaultSqlSessionFactory
+	   SqlSessionFactory(boolean):openSession(true)获取自动提交事务的SqlSession
+				      openSession(false)非自动提交事务的SqlSession对象
+	4、SqlSession:
+	   SqlSession接口：定义了操作数据的方法 例如selectOne(),selectList,insert,
+	   uodate(),delete();commit(),rollback().
+	   SqlSession接口的实现类DefaultSqlSession.
+	   使用要求：
+	   SqlSession对象不是线程安全的，需要在方法内部使用，在执行sql语句之前，使用
+	   openSession（）获取SqlSession()对象，在执行完sql语句后，需要关闭它，执行
+	   SqlSession.close().这样能保证他的使用是线程安全的。
+
+三、第三章
+	1、动态代理：使用SqlSession.getMapper(dao接口.class)获取这个dao接口的对象
+	2、传递参数：从Java代码中把数据传入到mapper文件的sql语句中。
+		1、parameterType:写在mapper文件中的一个属性，是dao接口中方法参数的数据类型
+		   parameterType:的值是Java的数据类型全限定名称或者是mybatis定义的别名
+		   例如：
+		       parameterType=“java.lang.Integer”
+		       parameterType="int"
+		   写在dao包下面的写sql语句的xxx.XML文件中的mapper中
+		   这个值不是强制必须要写的，mybatis通过反射机制能够发现接口参数的数据类型
+		
+		2、传递一个简单类型的参数：
+		   mybatis把java的基本数据类型和String都叫做简单数据类型
+		   在mapper文件中怎样获取简单类型的一个参数的值，使用#{任意字符}
+
+		3、使用#{}之后，mybatis执行sql是使用的jdbc中的perparedStatement对象
+		由mybatis执行下面的代码：
+			1.mybatis创建Connection,perparedStatement对象
+			String sql="select id,name,email,age from student where id = ?";
+			perparedstatement pst = conn.perparedstatement(sql);
+			pst.setInt(1,1001);
+
+			2.执行sql封装为resultType="com.bjpowernode.domain.Student"这个对象
+			ResultSet rs = ps.executeQuery();
+			while(rs.next()){
+			   //从数据库取表的一行数据，存到一个java对象属性中
+			   student student = new student();
+			   student.setId(rs.getInt("id"));
+			   ...
+			}
+			return student;//这里的student就返回给了方法调用的返回值，Dao的返回值
+
+	3.多个参数，使用java对象的属性值，作为参数实际值
+	  使用对象语法：#{属性名，javaType=类型名称，jdbcType=数据类型}很少用。
+	   javaType:指java中的属性数据类型
+	   javaType:在数据库中的数据类型
+
+	4.一些缩写的确切含义：
+		vo:value object,放一些存储数据的类。比如说 提交请求参数，name,age现在想把name,age传给一
+		个service类。
+		vo:view object，从servlet把数据返回给浏览器使用的类，表示显示结果的类
+
+		pojo:普通的有set，get方法的java 类。普通的java 对象
+		    Servlet --- StudentService(addStudent(MyParam param))
+
+		entity(domain域)：实体类，和数据库中的表对应的类。
+
+	5.#和$的区别
+		#使用preparedStatement对象执行sql,$使用的Statement对象执行sql,$效率相比较#低，而且会造成
+		sql注入的问题发生
+
+		$可以替换表名或者列名，在能确定数据是安全的时候可以使用
+
+		#使用？在sql语句中做站位的，使用preparedStatement执行sql，效率高
+		#能够避免sql注入，更安全。
+		$不使用占位符，是字符串连接方式，使用Statement对象执行sql，效率低
+		$有sql注入的风险，缺乏安全性
+		$可以替换表名或者列名
+
+	6.****两套执行sql语句的方法
+	   关于第二套方法:
+		1.使用mybatis的动态代理，mybatis帮助创建Dao接口的实现类，在实现类中调用SqlSession的方法执行sql语句
+
+		2.使用动态代理方式：
+			1.获取SqlSessio对象，SqlSessionFactory.openSession()
+			2.使用getMapper方法获取某个接口对象，sqlSession.getMapper(接口。class)
+			3.使用dao接口方法，调用方法就执行了mapper文件中的sql语句
+
+		3.使用动态代理方式的要求：
+			1.dao接口和mapper文件放在一起，同一个目录
+			2.dao接口和mapper文件名称一致
+			3.mapper文件中的namespace的值是dao接口的全限定名称
+			4.mapper文件中的<select><insert><updata><delete>等的id是接口中方法名称
+			5.dao接口中不要使用重载方法，不要使用同名的，不同参数的方法。
+
+	7.对参数的理解
+		就是从java代码中把实际的值传递到mapper文件中
+		1.一个简单类型的参数：#（任意字符）
+		2.多个简单类型的参数，使用@param("自定义名称")
+		3.使用一个java对象，对象的属性值作为mapper文件找到参数，#(java对象的属性名称)
+		4.使用参数的位置，语法#{arg0},#{arg1},mybatis3.4之前的版本，使用的#{0},#{1}
+		5.使用Map作为参数，#{map的key}
+
+	8.mybatis的输出结果
+	  mybatis执行了sql语句，得到一个java对象
+	  1）也就是说执行完SQL语句之后，我们要在java中得到或者说体现出来这个执行的结果，就要一个java对象
+	     这里的对象是任意的。
+
+	  2）处理方法：1.mybatis执行sql语句，然后mybatis调用类的无参数构造方法，创建对象。
+	               2.然后就是把数据库中对应的列的值赋值给java定义的数据类型，然后我们就可以拿到这个对象，从而
+		         拿到数据。这里数据库的列的名字和我们定义的接口方法在接口的具体实现里面的属性名字一致。
+
+	9.resultMap:结果映射，指定列名和java对象的属性对应关系
+		1）可以自定义列值赋值给哪一个属性
+		2）当你的列名和属性名不一样的时候，一定要使用resulyMap
+
+	10.对mybatis返回结果的总结：
+		1）resultType:表示sql语句的执行结果，转为的java对象的类型
+			1.类型的全限定名称，sql.xml文件中的namespace和类名拼接
+			2.别名：在mybatis主配置文件定义别名
+			      1.使用<typeAlias>
+			      2.使用<package name="包名"/>：类名就是别名
+
+		2）resultMap:自定义列名和java 对象的属性名对应关系
+		3）列名和属性名不一样的时候的解决方式：1.使用列名
+		    2.使用resultMap
+
+		4)like:1.在java代码中指定like的内容
+		   2.在mapper中拼接like
+
+四、动态sql
+动态sql：sql的内容是变化的，可以根据条件获取到不同的sql语句。主要是where部分发生变化
+
+动态sql是通过mybatis提供的标签，<if>,<where>,<foreach>实现的。
+
+
+
+
+
+
+
+
+	
